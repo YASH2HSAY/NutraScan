@@ -16,7 +16,9 @@ const productSchema = new mongoose.Schema({
     proteins:     { type: Number, default: null },
   },
 
-    allergens: [String],   
+    allergens: [String],
+    traces:    [String],   
+    dietTags:  [String],   
     additives: [String],   
     labels:    [String], 
 

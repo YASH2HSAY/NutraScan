@@ -20,6 +20,8 @@ function normalizeProduct(p, barcode) {
       proteins:     num(n.proteins_100g),
     },
     allergens: p.allergens_tags || [],
+    traces: p.traces_tags || [],
+    dietTags: p.ingredients_analysis_tags || [],
     additives: p.additives_tags || [],
     labels: p.labels_tags || [],
     nutriScore: p.nutriscore_grade || null,
