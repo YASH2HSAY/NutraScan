@@ -72,6 +72,49 @@ unit testing with Jest.
 - TODO: repeat 20 times each and report the mean.
 **Report material:** System design (cache-first flow), Implementation (schema,
 normaliser), Testing (Jest), Evaluation (response time with and without cache).
+ ### Day 2: Environment, database, caching, scoring and safety
+**Concepts learned:** middleware, environment variables (dotenv), MongoDB document
+database, Mongoose schema/model, unique index, normalising third-party data, caching,
+request timeouts, pure functions, unit testing (Jest), data-driven rules, fail-safe design,
+query strings, input whitelisting.
+**Built:**
+- nodemon, dotenv/.env (kept out of Git), MongoDB Atlas + Mongoose connection.
+- Product model and normaliser (~15 fields; missing values stored as null, not 0).
+- Cache-first product route with an 8 s timeout on Open Food Facts calls.
+- scoring/generalScore.js: Nutri-Score base, NOVA adjustment, additives (capped at -10),
+  organic bonus; fallbacks (nutrition estimate, NOVA-only) with a confidence level.
+- scoring/personalScore.js: rules for diabetes, hypertension, heart health, weight loss,
+  stored as data; missing nutrient data is reported as "unchecked", never guessed.
+- scoring/safetyCheck.js: allergens, traces, vegetarian; levels ok / warning / avoid.
+  Fail-safe: missing data never produces "ok".
+- scoring/rate.js: combines all three; an "avoid" result forces the score to 0.
+- Temporary profile via query string (to be replaced by login on Day 3).
+- 33 automated tests, all passing.
+**Design decisions:**
+1. null (no data) is different from 0 (real zero).
+2. Scoring is rule-based and auditable; AI will only extract, estimate and explain.
+3. Safety is fail-safe: a false alarm costs a second look, a false all-clear could harm.
+4. Health data in URLs is a privacy risk; the query-string profile is temporary only.
+**Problems and fixes:**
+1. npm install showed only a thick bar: display issue; fixed with npm config set progress false.
+2. npm audit showed 3 high warnings from dev tools; did not use --force.
+3. Two tests failed after the helper default changed: test data had no grade, so the
+   function correctly returned null. Fixed the tests, not the function.
+4. The "never below 0" test did not really test the clamp (result was exactly 0);
+   a real clamp test was added with the personal score.
+**Measurements (evaluation data):**
+- Coca-Cola first request (Open Food Facts): 3,180 ms. Cached request: 63 ms (~50x faster).
+- TODO: repeat 20 times each and report the mean.
+**Live API checks:** Coca-Cola general 6 (Bad); with diabetes 0 (clamped); Nutella with a milk
+allergy: Avoid / 0; malicious query values ignored.
+**Known limitations:**
+1. Products sharing a Nutri-Score letter, NOVA group and additive count get identical scores
+   (Coca-Cola and Nutella both 6). To refine with the numeric Nutri-Score points.
+2. Open Food Facts allergen data is community-entered; an empty list does not prove a
+   product is allergen-free.
+3. Weights are judgment calls: need citations and validation against Nutri-Score.
+**Report material:** Scoring methodology, System design (cache flow), Testing (33 tests),
+Evaluation (cache timing), Limitations, Ethics (fail-safe design, disclaimer).
 <!-- Template for each day. Copy this block.
 
 ### Day N: Title
