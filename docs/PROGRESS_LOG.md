@@ -22,7 +22,7 @@ Scanwise is a web app that scans a packaged-food barcode (or label photo), and r
 
 | Day | Focus | Status |
 |-----|-------|--------|
-| 1 | HTTP/REST, Git, Express server, product proxy endpoint | [ ] |
+| 1 | HTTP/REST, Git, Express server, product proxy endpoint | [ x] |
 | 2 | Middleware, env vars, MongoDB, Mongoose, scoring module + Jest tests, caching | [ ] |
 | 3 | Auth (bcrypt, JWT), user health profile, history, personalised scoring | [ ] |
 | 4 | React frontend: pages, routing, state | [ ] |
@@ -41,6 +41,37 @@ Scanwise is a web app that scans a packaged-food barcode (or label photo), and r
 - Built front-end prototype (index.html), tested with a mock product only. Camera and live API not yet tested on a real phone.
 - **Report material:** Problem statement, initial requirements.
 
+### Day 2: Environment, database, caching and scoring (in progress)
+**Concepts learned:** middleware (chain of functions between request and response),
+environment variables and dotenv, MongoDB document database, Mongoose schema and model,
+unique index, normalising third-party data, caching, request timeouts, pure functions,
+unit testing with Jest.
+**Built so far:**
+- nodemon for auto-restart, dotenv with a .env file (kept out of Git via .gitignore).
+- MongoDB Atlas free cluster; connection in config/db.js using Mongoose.
+- Product model (models/Product.js) and normaliser (services/normalizeProduct.js) that
+  keeps ~15 fields in our own format.
+- Cache-first product route: check MongoDB, otherwise call Open Food Facts with an
+  8-second timeout, save, return. Response includes source ("cache" or "openfoodfacts").
+- Scoring module started (scoring/generalScore.js) with Jest tests.
+**Design decisions:**
+1. Missing nutrition values are stored as null, not 0, because "no data" must not be
+   shown or scored as "zero sugar".
+2. We store our own clean format instead of the full Open Food Facts record, so the rest
+   of the app does not depend on a third party's field names.
+3. The scoring function returns the number and a breakdown list, so explanations can
+   only use facts the code computed.
+**Problems and fixes:**
+1. npm install mongoose showed only a thick bar and seemed to hang: a progress-bar
+   display issue in PowerShell. Fixed with `npm config set progress false`.
+2. npm audit reported 3 high severity warnings after installing dev tools. Did not run
+   `npm audit fix --force` (it can break the project); to review with `npm audit --omit=dev`.
+**Measurements (evaluation data):**
+- Coca-Cola barcode, first request (Open Food Facts): 3,180 ms.
+- Same barcode, second request (MongoDB cache): 63 ms (about 50x faster).
+- TODO: repeat 20 times each and report the mean.
+**Report material:** System design (cache-first flow), Implementation (schema,
+normaliser), Testing (Jest), Evaluation (response time with and without cache).
 <!-- Template for each day. Copy this block.
 
 ### Day N: Title
