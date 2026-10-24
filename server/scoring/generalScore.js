@@ -9,6 +9,38 @@ const LIMITS = [
   { key: 'salt',         label: 'Salt',          low: 0.3, high: 1.5 },
 ];
 
+// Points range and score range for each Nutri-Score letter (2023 algorithm)
+// from/to = Nutri-Score points; top/bottom = our score at those ends
+const FOOD_RANGES = {
+  a: { from: -15, to: 1,  top: 100, bottom: 80 },
+  b: { from: 1,   to: 3,  top: 79,  bottom: 60 },
+  c: { from: 3,   to: 11, top: 59,  bottom: 40 },
+  d: { from: 11,  to: 19, top: 39,  bottom: 20 },
+  e: { from: 19,  to: 40, top: 19,  bottom: 0 },
+};
+const BEVERAGE_RANGES = {
+  a: { from: -15, to: 1,  top: 100, bottom: 80 },
+  b: { from: -15, to: 2,  top: 79,  bottom: 60 },
+  c: { from: 2,   to: 6,  top: 59,  bottom: 40 },
+  d: { from: 6,   to: 10, top: 39,  bottom: 20 },
+  e: { from: 10,  to: 30, top: 19,  bottom: 0 },
+};
+
+// Place a product inside its letter's score range using its Nutri-Score points.
+// Returns null when we cannot (so the caller falls back to the fixed letter value).
+function baseFromPoints(grade, points, isBeverage) {
+  if (!isNum(points)) return null;                 // no points: cannot refine
+  const range = (isBeverage ? BEVERAGE_RANGES : FOOD_RANGES)[grade];
+  if (!range) return null;                         // unknown letter
+
+  // How far through the points range is this product? 0 = best end, 1 = worst end
+  let t = (points - range.from) / (range.to - range.from);
+  t = Math.max(0, Math.min(1, t));                 // clamp: the letter always wins
+
+  // Move down the score range by that fraction, then round to a whole number
+  return Math.round(range.top - t * (range.top - range.bottom));
+}
+
 function bandFor(score) {
   if (score >= 80) return 'Excellent';
   if (score >= 60) return 'Good';
@@ -46,10 +78,18 @@ function generalScore(product) {
   let applyNova = true;          // NOVA-only products already use NOVA as the base
 
   if (NUTRI_BASE[product.nutriScore]) {
-    score = NUTRI_BASE[product.nutriScore];
+    const letter = product.nutriScore.toUpperCase();
+    const fine = baseFromPoints(product.nutriScore, product.nutriScorePoints, product.isBeverage);
+    if (fine !== null) {
+      score = fine;                                // refined: uses the points inside the letter
+      breakdown.push(`Nutri-Score ${letter} (${product.nutriScorePoints} points): base ${score}`);
+    } else {
+      score = NUTRI_BASE[product.nutriScore];      // fallback: fixed value for the letter
+      breakdown.push(`Nutri-Score ${letter}: base ${score}`);
+    }
     confidence = 'high';
-    breakdown.push(`Nutri-Score ${product.nutriScore.toUpperCase()}: base ${score}`);
-  } else if (LIMITS.some((rule) => isNum(n[rule.key]))) {
+  }
+   else if (LIMITS.some((rule) => isNum(n[rule.key]))) {
     score = estimateFromNutrition(n, breakdown);
     confidence = 'medium';
   } else if (product.nova in NOVA_ONLY_BASE) {

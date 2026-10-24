@@ -25,3 +25,15 @@ test('an empty product still gets safe defaults', () => {
   expect(r.name).toBe('Unknown product');
   expect(r.allergens).toEqual([]);
 });
+
+test('reads Nutri-Score points and beverage flag', () => {
+  const fake = { nutriscore_score: 31, nutriscore_data: { is_beverage: 0 } };
+  const r = normalizeProduct(fake, '123');
+  expect(r.nutriScorePoints).toBe(31);
+  expect(r.isBeverage).toBe(false);
+});
+
+test('a Nutri-Score of 0 is kept, a missing one becomes null', () => {
+  expect(normalizeProduct({ nutriscore_score: 0 }, '1').nutriScorePoints).toBe(0);
+  expect(normalizeProduct({}, '1').nutriScorePoints).toBeNull();
+});

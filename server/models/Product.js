@@ -24,6 +24,8 @@ const productSchema = new mongoose.Schema({
 
     nutriScore: { type: String, default: null },   
     nova:       { type: Number, default: null },
+    nutriScorePoints: { type: Number, default: null },   
+    isBeverage:       { type: Boolean, default: false }, 
 
     source: { type: String, default: 'openfoodfacts' }, 
 }, { timestamps: true });

@@ -26,6 +26,8 @@ function normalizeProduct(p, barcode) {
     labels: p.labels_tags || [],
     nutriScore: p.nutriscore_grade || null,
     nova: p.nova_group || null,
+    nutriScorePoints: num(p.nutriscore_score),
+    isBeverage: !!(p.nutriscore_data && p.nutriscore_data.is_beverage === 1),
   };
 }
 
