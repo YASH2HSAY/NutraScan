@@ -1,33 +1,30 @@
 require('dotenv').config();
+if (!process.env.JWT_SECRET) {
+  console.error('JWT_SECRET is missing in .env');
+  process.exit(1);
+}
 const connectDB = require('./config/db');
 const express = require('express');
 const app = express();
+app.use(express.json());                                 // read JSON request bodies
+app.use('/api/auth', require('./routes/auth')); 
+app.use('/api/profile', require('./routes/profile'));
+app.use('/api/history', require('./routes/history'));         // mount the auth routes
 const PORT = process.env.PORT || 5000;
 const Product = require('./models/Product');
 const normalizeProduct = require('./services/normalizeProduct');
 const { rateProduct } = require('./scoring/rate');
+const { optionalAuth } = require('./middleware/auth');
+const User = require('./models/User');
+const ScanHistory = require('./models/ScanHistory');
 
-// TEMPORARY: read a health profile from the URL until login exists (Day 3).
-// Example: ?conditions=diabetes,heart&allergens=en:milk&vegetarian=true
-function profileFromQuery(query) {
-  // Turn "a,b,c" into ['a','b','c'], or [] if the value is missing
-  const split = (v) => (typeof v === 'string' && v ? v.split(',') : []);
 
-  const allowed = ['diabetes', 'hypertension', 'heart', 'weightLoss'];
-  const conditions = split(query.conditions).filter((c) => allowed.includes(c));
-  const allergens = split(query.allergens).filter((a) => /^en:[a-z-]+$/.test(a));
-  const vegetarian = query.vegetarian === 'true';
-
-  // Nothing selected means "not personalised"
-  if (!conditions.length && !allergens.length && !vegetarian) return null;
-  return { conditions, allergens, vegetarian };
-}
 
 app.get('/',(req,res)=> {
     res.json({message: 'Scanwise API is running'});
 });
 
-app.get('/api/product/:barcode', async (req, res) => {
+app.get('/api/product/:barcode', optionalAuth, async (req, res) => {
   const { barcode } = req.params;
 
   if (!/^\d{8,14}$/.test(barcode)) {
@@ -54,7 +51,32 @@ app.get('/api/product/:barcode', async (req, res) => {
     }
 
     // 3. Rate it (personalised only if a profile was sent)
-    const rating = rateProduct(product.toObject(), profileFromQuery(req.query));
+        // Load the logged-in user's saved profile (null if anonymous)
+    let profile = null;
+    if (req.userId) {
+      const user = await User.findById(req.userId);
+      if (user) profile = user.toObject().healthProfile;
+    }
+
+    const rating = rateProduct(product.toObject(), profile);
+
+    // Save to history for logged-in users; a failure here must not break the lookup
+    if (profile) {
+      try {
+        await ScanHistory.create({
+          userId: req.userId,
+          barcode: product.barcode,
+          name: product.name,
+          brand: product.brand,
+          imageUrl: product.imageUrl,
+          score: rating.final.score,
+          band: rating.final.band,
+          safetyLevel: rating.safety ? rating.safety.level : null,
+        });
+      } catch (error) {
+        console.error('Could not save history:', error.message);
+      }
+    }
     res.json({ source, product, rating });
   } catch (error) {
     console.error('Product lookup error:', error.message, '| cause:', error.cause);

@@ -108,8 +108,13 @@ query strings, input whitelisting.
 **Live API checks:** Coca-Cola general 6 (Bad); with diabetes 0 (clamped); Nutella with a milk
 allergy: Avoid / 0; malicious query values ignored.
 **Known limitations:**
-1. Products sharing a Nutri-Score letter, NOVA group and additive count get identical scores
-   (Coca-Cola and Nutella both 6). To refine with the numeric Nutri-Score points.
+1. **Improvement after evaluation:** The first scoring version gave Coca-Cola and Nutella
+the same score (6), because both were Nutri-Score E, NOVA 4. The base score now uses the
+numeric Nutri-Score points (2023 algorithm) to place a product inside its letter's range,
+with separate ranges for drinks. The letter always wins; missing points fall back to the
+fixed letter value. Nutella now scores 5. 42 tests passing.
+**New limitation:** Open Food Facts records change over time (Nutella's NOVA group changed
+from 4 to 3 between fetches), so cached products need periodic refresh.
 2. Open Food Facts allergen data is community-entered; an empty list does not prove a
    product is allergen-free.
 3. Weights are judgment calls: need citations and validation against Nutri-Score.
