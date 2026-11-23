@@ -120,6 +120,36 @@ from 4 to 3 between fetches), so cached products need periodic refresh.
 3. Weights are judgment calls: need citations and validation against Nutri-Score.
 **Report material:** Scoring methodology, System design (cache flow), Testing (33 tests),
 Evaluation (cache timing), Limitations, Ethics (fail-safe design, disclaimer).
+### Day 3: Authentication, profile and history
+**Concepts learned:** hashing vs encryption, bcrypt (salt, deliberate slowness, cost factor),
+JWT (signed, not encrypted; secret stays on the server), authentication vs authorization,
+protected and optional-auth middleware, Router, mass assignment, input whitelisting,
+compound indexes, status codes 201/401/409.
+**Built:**
+- User model (email, passwordHash, healthProfile) and ScanHistory model (snapshot of what
+  the user saw, indexed by user and date).
+- POST /api/auth/signup and /login (bcryptjs, JWT valid for 7 days, same error message for
+  wrong email or wrong password).
+- requireAuth and optionalAuth middleware.
+- GET/PUT /api/profile (every field validated; only expected fields are read).
+- GET /api/history (user id taken from the verified token, never from the URL).
+- Product route now personalises from the saved profile and records history; the temporary
+  query-string profile was removed.
+**Design decisions:**
+1. bcryptjs instead of bcrypt: pure JavaScript, same algorithm, avoids Windows build problems.
+2. An invalid token on the product route returns 401 instead of silently falling back to
+   anonymous, so a user never believes they are protected by their allergy profile when they
+   are not.
+3. History stores a snapshot, so it shows what the user saw even if product data changes.
+4. Health data moved out of URLs (privacy), now stored per user and returned only to them.
+**Security:** npm audit found 2 production vulnerabilities (body-parser, qs); fixed with the
+safe `npm audit fix` (no --force); re-audit clean and all tests passing. JWT_SECRET is in
+.env and checked at startup.
+**Problems and fixes:** (add any you hit, e.g. the secret generation step being missed)
+**Tests:** manual Postman checks of signup, login, profile, personalised product lookup and
+history. TODO: automated tests for the auth routes.
+**Report material:** Security chapter (hashing, JWT, authorization, fail-safe auth), System
+design (updated request flow), Ethics (sensitive health data handling).
 <!-- Template for each day. Copy this block.
 
 ### Day N: Title

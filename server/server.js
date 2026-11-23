@@ -3,13 +3,42 @@ if (!process.env.JWT_SECRET) {
   console.error('JWT_SECRET is missing in .env');
   process.exit(1);
 }
+const helmet = require('helmet');
+const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 const express = require('express');
 const app = express();
-app.use(express.json());                                 // read JSON request bodies
+app.use(helmet());                                       // safe security headers
+
+// Allow only our own frontend to call this API from a browser
+app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }));
+
+app.use(express.json({ limit: '10kb' }));                // read JSON bodies, reject huge ones
+
+// General limit: 300 requests per 15 minutes per client
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
+  standardHeaders: true,           // tell the client its remaining quota
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please try again later.' },
+});
+
+// Strict limit for signup and login: 20 attempts per 15 minutes
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
+});
+
+app.use('/api', apiLimiter);
+app.use('/api/auth', authLimiter);
 app.use('/api/auth', require('./routes/auth')); 
 app.use('/api/profile', require('./routes/profile'));
-app.use('/api/history', require('./routes/history'));         // mount the auth routes
+app.use('/api/history', require('./routes/history'));         
 const PORT = process.env.PORT || 5000;
 const Product = require('./models/Product');
 const normalizeProduct = require('./services/normalizeProduct');
@@ -17,6 +46,7 @@ const { rateProduct } = require('./scoring/rate');
 const { optionalAuth } = require('./middleware/auth');
 const User = require('./models/User');
 const ScanHistory = require('./models/ScanHistory');
+
 
 
 
@@ -50,7 +80,7 @@ app.get('/api/product/:barcode', optionalAuth, async (req, res) => {
       product = await Product.create(normalizeProduct(data.product, barcode));
     }
 
-    // 3. Rate it (personalised only if a profile was sent)
+    
         // Load the logged-in user's saved profile (null if anonymous)
     let profile = null;
     if (req.userId) {
