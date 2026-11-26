@@ -25,15 +25,17 @@ export default function Login({ mode }) {
     }
   }
 
-  return (
-    <form onSubmit={submit}>
-      <h2>{mode === 'login' ? 'Log in' : 'Create account'}</h2>
-      <p><input type="email" placeholder="Email" value={email}
-                onChange={(e) => setEmail(e.target.value)} required /></p>
-      <p><input type="password" placeholder="Password (8+ characters)" value={password}
-                onChange={(e) => setPassword(e.target.value)} required /></p>
-      <button disabled={busy}>{busy ? 'Please wait...' : (mode === 'login' ? 'Log in' : 'Sign up')}</button>
-      {error && <p style={{ color: 'crimson' }}>{error}</p>}
+    return (
+    <form className="card form" onSubmit={submit}>
+      <h1>{mode === 'login' ? 'Log in' : 'Create account'}</h1>
+      <input className="input" type="email" placeholder="Email" value={email}
+             onChange={(e) => setEmail(e.target.value)} required />
+      <input className="input" type="password" placeholder="Password (8+ characters)" value={password}
+             onChange={(e) => setPassword(e.target.value)} required />
+      <button className="btn" disabled={busy}>
+        {busy ? 'Please wait...' : (mode === 'login' ? 'Log in' : 'Sign up')}
+      </button>
+      {error && <p className="error">{error}</p>}
     </form>
   );
 }
